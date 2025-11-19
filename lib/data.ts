@@ -7,6 +7,7 @@ import OpenAI from "openai";
 import * as schema from './schema';
 import { PgTableWithColumns } from 'drizzle-orm/pg-core';
 import { Thing } from './schema';
+import emojiRegex from 'emoji-regex-xs'
 
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 const db = drizzle(pool, {schema});
@@ -59,20 +60,8 @@ const response = await client.responses.create({
 }
 
 async function emojiPrompt(thing: string): Promise<string> {
-const response = await client.responses.create({
-    model: "gpt-5-nano",
-//     instructions: `You receive a prompt and answer with what new thing, person, idea or concept they are getting at. You NEVER ask questions. Examples:
-//  planet-like fire -> star
-//  land of the free -> United States of America
-//  leaves for hot water -> tea
-//  watch the -> video
-//  water on a farm -> irrigation
-//  found in ocean -> marine life
-//  Ireland crop -> potato
-//  reverse windmill -> fan
-//  sequence discipline -> operational checklist
-//  low sugar -> hypoglycemia
-//  steam through turbine -> electricity`,
+  const response = await client.responses.create({
+      model: "gpt-5-nano",
   instructions: 
 `You convert concepts into a single emoji. Examples:
  milk -> 🥛
@@ -90,7 +79,9 @@ const response = await client.responses.create({
     },
     max_output_tokens: 32
   })
-  return response.output_text
+  let regex = emojiRegex()
+  regex = new RegExp(`(${regex.source})+`, regex.flags)
+  return [...response.output_text.matchAll(regex)].map(([a]) => a)[0]??response.output_text
 }
 
 interface WordClasses {
@@ -158,8 +149,15 @@ async function classPrompt(thing: string): Promise<WordClasses> {
   return JSON.parse(response.output_text) as WordClasses
 }
 
-async function getEmbedding(thing: string): Promise<number[]> {
-  return (await client.embeddings.create({input: thing, model: "text-embedding-3-large"})).data[0].embedding
+export async function getEmbedding(text: string): Promise<number[]> {
+  const found = await db.select().from(schema.embeddings).where(eq(schema.embeddings.text, text))
+  if (found.length > 0) {
+    return found[0].embedding
+  }
+  const embedding = (await client.embeddings.create({input: " "+text, model: "text-embedding-3-large"})).data[0].embedding
+  // Do this in parallel, maybe
+  await db.insert(schema.embeddings).values({text, embedding}).onConflictDoNothing()
+  return embedding
 }
 
 export async function getThing(thing: string): Promise<Thing | undefined> {
@@ -179,7 +177,7 @@ export async function getOrCreateThing(thing: string): Promise<Thing> {
   const vector = await getEmbedding(thing)
   const classes = await classPrompt(thing)
   const things = schema.things
-  await db.insert(things).values({emoji, thing, vector, ...classes})
+  await db.insert(things).values({emoji, thing, vector, ...classes}).onConflictDoNothing()
   return (await db.select().from(things).where(eq(things.thing, thing)))[0]!
 }
 

@@ -16,6 +16,7 @@
     "@mui/material": "^7.3.5",
     "drizzle-kit": "^0.31.6",
     "drizzle-orm": "^0.44.7",
+    "emoji-regex-xs": "^2.0.1",
     "hnswlib-wasm": "^0.8.2",
     "next": "16.0.1",
     "openai": "^6.9.0",

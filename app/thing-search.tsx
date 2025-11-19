@@ -3,14 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import ThingClassSelector, { ThingClassSelectorValue } from "./thing-class-selector";
 import Autocomplete from '@mui/material/Autocomplete';
-import { Box, Divider, FormControl, Input, InputAdornment, InputLabel, OutlinedInput, TextField } from "@mui/material";
+import { Box, debounce, Divider, FormControl, Input, InputAdornment, InputLabel, OutlinedInput, TextField } from "@mui/material";
 // import Card from "./card";
 import Stack from '@mui/material/Stack';
 import AccountCircle from "@mui/icons-material/AccountCircle";
 import SearchIcon from '@mui/icons-material/Search';
 import { craft } from "@/lib/data";
 import ThingEl from "./thing";
-import { FormEvent, FormEventHandler, RefObject, use, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { FormEvent, FormEventHandler, Fragment, RefObject, SetStateAction, use, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { HierarchicalNSW, loadHnswlib} from 'hnswlib-wasm';
 import { Thing } from "@/lib/schema";
 import ThingView from "./thing";
@@ -71,6 +71,9 @@ class Index<T extends Indexable> {
   }
 
   public search(fromVector: number[], ns: number[] = this.map.keys().toArray()): [T, number][] {
+    if (this.map.size === 0) {
+      return []
+    }
     const result = this.idx.searchKnn(fromVector, ns ? ns.length : this.map.size, ns ? (n: number) => ns.includes(n) : () => true)
     return result.distances.map((dist, i) => ([this.map.get(result.neighbors[i])!, dist]))
   }
@@ -81,52 +84,62 @@ class Index<T extends Indexable> {
   }
 }
 
+async function getEmbedding(text: string): Promise<number[]> {
+  return await (await fetch("/api/embedding", {method: "POST", body: JSON.stringify({text})})).json()
+}
+
 export default function ThingSearch() {
   const [searchText, setSearchText] = useState("");
   const [classFilter, setClassFilter] = useState<ThingClassSelectorValue>(null);
-  const [limit, setLimit] = useState(5);
   const [allThings, setAllThings] = useState<Thing[]>([])
-  // const [hmm, hmm2] = useTransition()
-  // const initPromise: RefObject<Promise<Index<MakePropNotNull<Thing, "vector">>>> = useRef(null)
   const [index, setIndex] = useState<Index<MakePropNotNull<Thing, "vector">>>()
-  // const [vectorSearch, setVectorSearch] = useState<Thing["n"] | null>(null)
-  // const [distances, setDistances] = useState<Map<number, number>>(new Map())
+  const [embedding, setEmbedding] = useState<number[] | null>(null)
   const inputId = useId()
+  const setAllThingsAndUpdateIndex = (value: typeof allThings) => {
+    index?.addMultiple(value.map(a => ensureNotNull(a, "vector")))
+    setAllThings(value)
+  }
   const onSubmit: FormEventHandler<HTMLFormElement> = e => {
     e.preventDefault()
     ;(async () => {
       const thing: Thing = (await (await fetch("/api/things", {method: "POST", body: JSON.stringify({thing: searchText})})).json())
       if (!thing.vector) {
-        throw new TypeError("No vector??")
+        throw new TypeError("No vector?")
       }
       const newThings = [...allThings, thing]
-      setAllThings(newThings)
+      setAllThingsAndUpdateIndex(newThings)
     })()
   }
-  // useEffect(() => {
-  //   (async () => {
-
-  //   })()
-  // }, [searchText, classFilter, limit])
+  useEffect(() => {
+    (async () => {
+      if (searchText === "") {
+        setEmbedding(null)
+      } else {
+        setEmbedding(await getEmbedding(searchText))
+      }
+    })()
+  }, [searchText])
   useEffect(() => {
     (async () => {
       const things = (await (await fetch("/api/things")).json())
-      setAllThings(things)
+      setAllThingsAndUpdateIndex(things)
     })()
   }, [])
   useEffect(() => {
     (async () => {
-      setIndex(await Index.init())
+      if (!index) {
+        const properAllThings = allThings.map(a => ensureNotNull(a, "vector"))
+        const index = await Index.init<typeof properAllThings[0]>()
+        index.addMultiple(properAllThings)
+        setIndex(index)
+      }
     })()
-  }, [])
-  useEffect(() => {
-    index?.addMultiple(allThings.map(a => ensureNotNull(a, "vector")))
-  }, [allThings, index])
-  let thingsToDisplay = allThings
+  }, [allThings])
+  let thingsToDisplay: [Thing, number][] = allThings.map(a => [a, 0])
   if (index && !(searchText === "" && classFilter === null)) {
     const specificThing = allThings.find(a => a.thing === searchText && a.vector)
-    if (specificThing) {
-      thingsToDisplay = index.getClosest(specificThing.vector!).map(a => a[0])
+    if (specificThing || embedding) {
+      thingsToDisplay = index.getClosest((specificThing?.vector!) || embedding)
     }
   }
   return (
@@ -138,8 +151,12 @@ export default function ThingSearch() {
         </Box>
         <ThingClassSelector classFilter={classFilter} onChange={setClassFilter}></ThingClassSelector>
         <Divider orientation="horizontal" flexItem />
-        <div className="items-center">
-          {thingsToDisplay.map(a => <ThingView props={a} key={a.n}></ThingView>)}
+        <div className="flex flex-wrap justify-between">
+          {
+          thingsToDisplay
+          .map(a => <Fragment key={a[0].n}><ThingView props={a[0]} dist={a[1]} key={a[0].n}></ThingView></Fragment>)
+          // {(90-(Math.acos(a[1])/Math.PI)*180).toFixed(3)}
+          }
         </div>
       </Stack>
     </div>

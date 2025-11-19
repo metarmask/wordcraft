@@ -13,8 +13,9 @@ import { Thing } from '@/lib/schema';
 
 
 
-export default function ThingView({props}: {props: Thing}) {
+export default function ThingView({props, dist}: {props: Thing, dist: number}) {
   return (
-    <div className={"rounded border p-2 inline-block mr-5 mt-5"}>{props.emoji} {props.thing}</div>
+    // `scale(${1-Math.E**(5*(dist-1))})`
+    <div className={"rounded border border-gray-400 p-1 inline-block mr-2 mt-2"} style={{transform: `scale(${0.8+Math.acos(dist)/(Math.PI*2)})`}}>{props.emoji} {props.thing}</div>
   );
 }
