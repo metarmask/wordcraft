@@ -60,7 +60,7 @@ const response = await client.responses.create({
 
 async function emojiPrompt(thing: string): Promise<string> {
 const response = await client.responses.create({
-    model: "gpt-4.1-mini",
+    model: "gpt-5-nano",
 //     instructions: `You receive a prompt and answer with what new thing, person, idea or concept they are getting at. You NEVER ask questions. Examples:
 //  planet-like fire -> star
 //  land of the free -> United States of America
@@ -85,10 +85,77 @@ const response = await client.responses.create({
       }
     ],
     text: { format: { type: "text" } },
-    reasoning: {},
-    max_output_tokens: 16
+    reasoning: {
+      "effort": "minimal"
+    },
+    max_output_tokens: 32
   })
   return response.output_text
+}
+
+interface WordClasses {
+  verb: boolean,
+  noun: boolean,
+  adjective: boolean,
+}
+
+async function classPrompt(thing: string): Promise<WordClasses> {
+  const response = await client.responses.create({
+      model: "gpt-5-nano",
+    input: [
+      {
+        "role": "developer",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Output all the word classes the provided phrase can function as."
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": " " + thing
+          }
+        ]
+      },
+    ],
+    text: {
+      "format": {
+        "type": "json_schema",
+        "name": "matching_categories",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "verb": {
+              "type": "boolean"
+            },
+            "noun": {
+              "type": "boolean"
+            },
+            "adjective": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "verb",
+            "noun",
+            "adjective"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "verbosity": "medium"
+    },
+    reasoning: {
+      "effort": "minimal"
+    },
+    max_output_tokens: 45
+  })
+  return JSON.parse(response.output_text) as WordClasses
 }
 
 async function getEmbedding(thing: string): Promise<number[]> {
@@ -102,15 +169,22 @@ export async function getThing(thing: string): Promise<Thing | undefined> {
     return dbResult[0]
   }
 }
-async function getOrCreateThing(thing: string): Promise<Thing> {
+export async function getOrCreateThing(thing: string): Promise<Thing> {
   const existingThing = await getThing(thing)
   if (existingThing) {
     return existingThing
   }
-  const [emoji, vector] = await Promise.all([emojiPrompt(thing), getEmbedding(thing)])
+  // const [emoji, vector, classes] = await Promise.all([emojiPrompt(thing), getEmbedding(thing), classPrompt(thing)])
+  const emoji = await emojiPrompt(thing)
+  const vector = await getEmbedding(thing)
+  const classes = await classPrompt(thing)
   const things = schema.things
-  await db.insert(things).values({emoji, thing, vector})
+  await db.insert(things).values({emoji, thing, vector, ...classes})
   return (await db.select().from(things).where(eq(things.thing, thing)))[0]!
+}
+
+export async function getAllThings(): Promise<Thing[]> {
+  return await db.select().from(schema.things)
 }
 
 

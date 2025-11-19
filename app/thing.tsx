@@ -9,12 +9,12 @@ import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { Box, FormControl, FormLabel } from '@mui/material';
-import { Thing as ThingData } from '@/lib/schema';
+import { Thing } from '@/lib/schema';
 
 
 
-export default function Thing({hmm}: {hmm: ThingData}) {
+export default function ThingView({props}: {props: Thing}) {
   return (
-    <div className={"rounded border p-2 inline-block mr-5 mt-5"}>{hmm.emoji} {hmm.thing}</div>
+    <div className={"rounded border p-2 inline-block mr-5 mt-5"}>{props.emoji} {props.thing}</div>
   );
 }
