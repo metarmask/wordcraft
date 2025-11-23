@@ -1,10 +1,11 @@
 "use client"
 
-import React, {ReactElement, SetStateAction, useState} from 'react';
+import React, {ReactElement, SetStateAction, useCallback, useState} from 'react';
 import {
   DndContext, 
   DragStartEvent,
   KeyboardSensor,
+  closestCenter,
   pointerWithin,
   PointerSensor,
   useSensor,
@@ -31,7 +32,7 @@ export function Dnd<T, Y extends UniqueIdentifier>(
         getID: (t: T) => Y,
         render: (t: T) => ReactElement,
         draggableClassName?: string,
-        onRemove?: (id: Y, info: {delta: {x: number, y: number}, rect: ClientRect}) => boolean | void,
+        onRemove?: (id: Y, info: {delta: {x: number, y: number}, rect: ClientRect | DOMRect}) => boolean | void,
         getManualTransform?: (t: T) => string | undefined,
         getManualTransition?: (t: T) => string | undefined,
         getManualStyle?: (t: T) => React.CSSProperties | undefined,
@@ -45,11 +46,18 @@ const [activeId, setActiveId] = useState<Y | null>(null);
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+  const collisionDetection = useCallback((context: any) => {
+    // Keyboard sensor has no pointer coordinates; fall back to center-based detection
+    return context?.pointerCoordinates
+      ? pointerWithin(context)
+      : closestCenter(context);
+  }, []);
+
   return (
     <DndContext 
         onDragStart={handleDragStart}
         sensors={sensors}
-        collisionDetection={pointerWithin}
+        collisionDetection={collisionDetection}
         measuring={{droppable: {strategy: MeasuringStrategy.Always}}}
         onDragEnd={handleDragEnd}
     >
@@ -64,6 +72,8 @@ const [activeId, setActiveId] = useState<Y | null>(null);
             manualTransform={getManualTransform?.(item)}
             manualTransition={getManualTransition?.(item)}
             manualStyle={getManualStyle?.(item)}
+            onRemoveKey={rect => handleKeyRemove(getID(item), rect)}
+            focusPrev={() => focusItemBefore(getID(item))}
           >
             {render(item)}
           </SortableItem>
@@ -115,6 +125,36 @@ const [activeId, setActiveId] = useState<Y | null>(null);
 
       return currentItems;
     });
+  }
+
+  function handleKeyRemove(id: Y, rect?: ClientRect | DOMRect) {
+    if (!onRemove) return;
+    setItems((currentItems) => {
+      const activeIndex = currentItems.findIndex((item) => getID(item) === id);
+      if (activeIndex === -1) return currentItems;
+
+      const shouldRemove = onRemove(id, {
+        delta: {x: 0, y: 0},
+        rect: rect ?? new DOMRect(),
+      });
+      if (shouldRemove === false) {
+        return currentItems;
+      }
+      const next = [...currentItems];
+      next.splice(activeIndex, 1);
+      return next;
+    });
+  }
+
+  function focusItemBefore(id: Y) {
+    const el = document.querySelector<HTMLElement>(`[data-recipe-id="${id}"]`);
+    if (!el) return;
+    const itemsIds = items.map(getID);
+    const idx = itemsIds.indexOf(id);
+    const targetId = itemsIds[idx - 1] ?? itemsIds[idx + 1];
+    if (targetId === undefined) return;
+    const target = document.querySelector<HTMLElement>(`[data-recipe-id="${targetId}"]`);
+    target?.focus();
   }
 }
 

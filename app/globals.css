@@ -41,16 +41,16 @@ body {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 8px;
+  width: 12px;
   transition: opacity 150ms ease;
 }
 .scroll-shadow-left {
   left: 0;
-  background: linear-gradient(90deg, rgba(0,0,0,0.42), transparent);
+  background: linear-gradient(90deg, rgba(0,0,0,0.3), transparent);
 }
 .scroll-shadow-right {
   right: 0;
-  background: linear-gradient(270deg, rgba(0,0,0,0.42), transparent);
+  background: linear-gradient(270deg, rgba(0,0,0,0.3), transparent);
 }
 
 .scroll-hotspot {
@@ -58,7 +58,7 @@ body {
   top: 0;
   bottom: 0;
   width: 48px;
-  cursor: ew-resize;
+  /* cursor: ew-resize; */
 }
 .scroll-hotspot-left { left: 0; }
 .scroll-hotspot-right { right: 0; }

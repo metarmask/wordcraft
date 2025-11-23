@@ -57,7 +57,7 @@ export default function Home() {
         {recipe.length === 0 ? (
           <div className="inline-block invisible pointer-events-none" aria-hidden>
             <ThingView
-              props={{emoji: "🍎", thing: "Phantom", n: -1, vector: null, verb: null, noun: null, adjective: null}}
+              props={{emoji: "👻", thing: "Phantom", n: -1, vector: null, verb: null, noun: null, adjective: null}}
               dist={0}
             />
           </div>
