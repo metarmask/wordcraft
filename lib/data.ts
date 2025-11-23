@@ -29,7 +29,7 @@ const response = await client.responses.create({
 //  low sugar -> hypoglycemia
 //  steam through turbine -> electricity`,
   instructions: 
-`Given only the clue, what is the mystery thing, person, idea or concept? Examples:
+`Given only the clue, what is the mystery thing, person, idea or concept? Immediate reply only. Examples:
  planet-like fire -> star
  land of the free -> United States of America
  contradiction book -> Catch-22
@@ -56,7 +56,7 @@ const response = await client.responses.create({
     reasoning: {},
     max_output_tokens: 16
   })
-  return response.output_text
+  return response.output_text.replace(recipe + " -> ", "")
 }
 
 async function emojiPrompt(thing: string): Promise<string> {
@@ -188,12 +188,6 @@ export async function getAllThings(): Promise<Thing[]> {
 
 export async function craft(recipe: string): Promise<Thing> {
   recipe = recipe.trim().split(/\s/g).join(" ");
-  // await db.execute(sql`INSERT INTO results (recipe, result) VALUES (${recipe}, ${result}) ON CONFLICT (id) DO UPDATE SET count = counters.count + 1;`);
-  // const result = await db.execute(sql`UPDATE results SET n_uses=n_uses+1 WHERE recipe=${recipe};`);
-  // if (result.rowCount??0 > 0) {
-  // const dbResult = await db.query.results.findFirst({where: (items, {eq}) => eq("recipe", recipe)})
-  // }
-  // const item = await db.query.results.findFirst({where: (items, { eq }) => eq(items.recipe, recipe)});
   const rs = schema.results
   const dbResult = await db.select().from(rs).where(eq(rs.recipe, recipe))
   if (dbResult.length) {
