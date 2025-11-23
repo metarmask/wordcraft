@@ -3,39 +3,41 @@
 import React, {ReactElement, SetStateAction, useState} from 'react';
 import {
   DndContext, 
-  closestCenter,
+  DragStartEvent,
   KeyboardSensor,
+  pointerWithin,
   PointerSensor,
   useSensor,
   useSensors,
   UniqueIdentifier,
   TouchSensor,
   DragOverlay,
+  DragEndEvent,
+  MeasuringStrategy,
+  DropAnimation,
 } from '@dnd-kit/core';
-import {
-  arrayMove,
-  horizontalListSortingStrategy,
-  SortableContext,
-  sortableKeyboardCoordinates
-} from '@dnd-kit/sortable';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import {
   restrictToWindowEdges,
 } from '@dnd-kit/modifiers';
 
 import {SortableItem} from './SortableItem';
-import { RenderingMode } from 'next/dist/build/rendering-mode';
 
-export function Dnd<T>(
-    {items, setItems, getID, render, draggableClassName}:
+export function Dnd<T, Y extends UniqueIdentifier>(
+    {items, setItems, getID, render, draggableClassName, onRemove, getManualTransform, getManualTransition, getManualStyle}:
     {
         items: T[],
         setItems: React.Dispatch<SetStateAction<T[]>>,
-        getID: (t: T) => UniqueIdentifier,
+        getID: (t: T) => Y,
         render: (t: T) => ReactElement,
-        draggableClassName?: string
+        draggableClassName?: string,
+        onRemove?: (id: Y, info: {delta: {x: number, y: number}, rect: ClientRect}) => boolean | void,
+        getManualTransform?: (t: T) => string | undefined,
+        getManualTransition?: (t: T) => string | undefined,
+        getManualStyle?: (t: T) => React.CSSProperties | undefined,
     }
 ){
-const [activeId, setActiveId] = useState(null);
+const [activeId, setActiveId] = useState<Y | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor),
@@ -43,44 +45,77 @@ const [activeId, setActiveId] = useState(null);
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-  console.log(activeId)
   return (
     <DndContext 
         onDragStart={handleDragStart}
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={pointerWithin}
+        measuring={{droppable: {strategy: MeasuringStrategy.Always}}}
         onDragEnd={handleDragEnd}
     >
       <SortableContext 
         items={items.map(getID)}
-        // strategy={horizontalListSortingStrategy}
       >
-        {items.map(item => <SortableItem className={draggableClassName} key={getID(item)} id={getID(item)}>{render(item)}</SortableItem>)}
+        {items.map(item => (
+          <SortableItem
+            className={draggableClassName}
+            key={getID(item)}
+            id={getID(item)}
+            manualTransform={getManualTransform?.(item)}
+            manualTransition={getManualTransition?.(item)}
+            manualStyle={getManualStyle?.(item)}
+          >
+            {render(item)}
+          </SortableItem>
+        ))}
       </SortableContext>
       <DragOverlay
-        dropAnimation={{
-          duration: 50,
-          easing: 'ease-out',
-        }}
         modifiers={[restrictToWindowEdges]}
+        dropAnimation={dropAnimation}
       >
         {activeId !== null ? render(items.find(a => getID(a) === activeId)!) : undefined}
       </DragOverlay>
     </DndContext>
   );
   
-  function handleDragStart(event: any) {
-    setActiveId(event.active.id);
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as Y);
   }
 
-  function handleDragEnd(event: any) {
+  function handleDragEnd(event: DragEndEvent) {
     setActiveId(null);
     const {active, over} = event;
-    if (active.id !== over.id) {
-        const oldIndex = items.findIndex(a => getID(a) === active.id);
-        const newIndex = items.findIndex(a => getID(a) === over.id);
 
-        setItems(arrayMove(items, oldIndex, newIndex));
-    }
+    setItems((currentItems) => {
+      const activeIndex = currentItems.findIndex((item) => getID(item) === active.id);
+
+      if (activeIndex === -1) {
+        return currentItems;
+      }
+
+      // Drop outside of any sortable item removes it from the recipe
+      if (!over) {
+        if (onRemove) {
+          const shouldRemove = onRemove(active.id as Y, {
+            delta: event.delta,
+            rect: (event.active.rect.current.translated ?? event.active.rect.current.initial) as ClientRect,
+          });
+          if (shouldRemove === false) {
+            return currentItems;
+          }
+        }
+        return currentItems.filter((_, index) => index !== activeIndex);
+      }
+
+      const overIndex = currentItems.findIndex((item) => getID(item) === over.id);
+
+      if (overIndex !== -1 && activeIndex !== overIndex) {
+        return arrayMove(currentItems, activeIndex, overIndex);
+      }
+
+      return currentItems;
+    });
   }
 }
+
+const dropAnimation: DropAnimation | null = null;

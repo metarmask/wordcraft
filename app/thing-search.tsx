@@ -152,7 +152,7 @@ export default function ThingSearch({onPick}: {onPick: (t: Thing) => any}) {
         </Box>
         <ThingClassSelector classFilter={classFilter} onChange={setClassFilter}></ThingClassSelector>
         <Divider orientation="horizontal" flexItem />
-        <div className="flex flex-wrap justify-between" onClick={event => {
+        <div className="flex flex-wrap justify-between gap-y-2" onClick={event => {
           const hello = event.target
           if (hello instanceof HTMLElement) {
             if (hello.classList.contains("thing")) {

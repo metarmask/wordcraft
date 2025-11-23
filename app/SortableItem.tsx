@@ -1,13 +1,26 @@
 "use client"
 
 
-import React, { ReactElement, ReactNode } from 'react';
-import {horizontalListSortingStrategy, rectSortingStrategy, rectSwappingStrategy, useSortable} from '@dnd-kit/sortable';
+import React, { CSSProperties, ReactNode } from 'react';
+import {horizontalListSortingStrategy, useSortable, defaultAnimateLayoutChanges, AnimateLayoutChanges} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
-import ThingView from './thing';
 import { UniqueIdentifier } from '@dnd-kit/core';
 
-export function SortableItem<T>({id, children, className}: {id: UniqueIdentifier, children: ReactNode, className?: string}) {
+export function SortableItem<T>({
+    id,
+    children,
+    className,
+    manualTransform,
+    manualTransition,
+    manualStyle,
+}: {
+    id: UniqueIdentifier,
+    children: ReactNode,
+    className?: string,
+    manualTransform?: string,
+    manualTransition?: string,
+    manualStyle?: CSSProperties,
+}) {
     const {
         attributes,
         listeners,
@@ -15,13 +28,25 @@ export function SortableItem<T>({id, children, className}: {id: UniqueIdentifier
         transform,
         transition,
         isDragging
-    } = useSortable({id, strategy: horizontalListSortingStrategy});
+    } = useSortable({
+        id,
+        strategy: horizontalListSortingStrategy,
+        animateLayoutChanges,
+    });
+
+    const computedTransform = !isDragging && manualTransform
+        ? manualTransform
+        : CSS.Transform.toString(transform);
+    const computedTransition = !isDragging && manualTransform
+        ? (manualTransition ?? transition)
+        : transition;
 
     const style = {
-        transform: CSS.Transform.toString(transform),
-        transition
+        transform: computedTransform,
+        transition: computedTransition,
+        ...(manualStyle ?? {}),
     };
-    className = ["touch-none", className, isDragging ? "invisible" : ""]
+    className = ["touch-pan-x", className, isDragging ? "invisible" : ""]
         .filter(Boolean)
         .join(" ")
   
@@ -31,3 +56,6 @@ export function SortableItem<T>({id, children, className}: {id: UniqueIdentifier
         </div>
     );
 }
+
+const animateLayoutChanges: AnimateLayoutChanges = (args) =>
+  defaultAnimateLayoutChanges({...args, wasDragging: true});
