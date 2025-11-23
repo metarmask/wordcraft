@@ -57,10 +57,13 @@ const [activeId, setActiveId] = useState(null);
       >
         {items.map(item => <SortableItem className={draggableClassName} key={getID(item)} id={getID(item)}>{render(item)}</SortableItem>)}
       </SortableContext>
-      <DragOverlay dropAnimation={{
-  duration: 200,
-  easing: 'ease-out',
-}} modifiers={[restrictToWindowEdges]}>
+      <DragOverlay
+        dropAnimation={{
+          duration: 50,
+          easing: 'ease-out',
+        }}
+        modifiers={[restrictToWindowEdges]}
+      >
         {activeId !== null ? render(items.find(a => getID(a) === activeId)!) : undefined}
       </DragOverlay>
     </DndContext>

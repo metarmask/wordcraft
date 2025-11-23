@@ -16,14 +16,17 @@ export function SortableItem<T>({id, children, className}: {id: UniqueIdentifier
         transition,
         isDragging
     } = useSortable({id, strategy: horizontalListSortingStrategy});
-  
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition
     };
-    
+    className = ["touch-none", className, isDragging ? "invisible" : ""]
+        .filter(Boolean)
+        .join(" ")
+  
     return (
-        <div className={className + " touch-none" + (isDragging ? " invisible" : "")} ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div data-recipe-id={id} className={className} ref={setNodeRef} style={style} {...attributes} {...listeners}>
         {children}
         </div>
     );
