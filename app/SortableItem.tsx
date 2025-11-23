@@ -13,7 +13,8 @@ export function SortableItem<T>({id, children, className}: {id: UniqueIdentifier
         listeners,
         setNodeRef,
         transform,
-        transition
+        transition,
+        isDragging
     } = useSortable({id, strategy: horizontalListSortingStrategy});
   
     const style = {
@@ -22,7 +23,7 @@ export function SortableItem<T>({id, children, className}: {id: UniqueIdentifier
     };
     
     return (
-        <div className={className + " touch-none"} ref={setNodeRef} style={style} {...attributes} {...listeners}>
+        <div className={className + " touch-none" + (isDragging ? " invisible" : "")} ref={setNodeRef} style={style} {...attributes} {...listeners}>
         {children}
         </div>
     );
