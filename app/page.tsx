@@ -21,7 +21,7 @@ export default function Home() {
   const [hasLeftShadow, setHasLeftShadow] = useState(false)
   const [hasRightShadow, setHasRightShadow] = useState(false)
   const scrollFrameRef = useRef<number | null>(null)
-  const scrollDirRef = useRef<-1 | 1 | null>(null)
+  const scrollDirRef = useRef< -1 | 1 | null>(null)
 
   useEffect(() => {
     if (lastAddedId === null || !recipeContainerRef.current) {
@@ -108,12 +108,12 @@ export default function Home() {
         <div className={`scroll-shadow scroll-shadow-left ${hasLeftShadow ? "opacity-100" : "opacity-0"}`} aria-hidden></div>
         <div className={`scroll-shadow scroll-shadow-right ${hasRightShadow ? "opacity-100" : "opacity-0"}`} aria-hidden></div>
         <div
-          className="scroll-hotspot scroll-hotspot-left"
+          className={`scroll-hotspot scroll-hotspot-left ${hasLeftShadow ? "" : "pointer-events-none"}`}
           onMouseEnter={() => startAutoScroll(-1)}
           onMouseLeave={stopAutoScroll}
         ></div>
         <div
-          className="scroll-hotspot scroll-hotspot-right"
+          className={`scroll-hotspot scroll-hotspot-right ${hasRightShadow ? "" : "pointer-events-none"}`}
           onMouseEnter={() => startAutoScroll(1)}
           onMouseLeave={stopAutoScroll}
         ></div>

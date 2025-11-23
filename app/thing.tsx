@@ -5,7 +5,7 @@ import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 
 
-export default function ThingView({className, style, props, dist}: {className?: string, style?: CSSProperties, props: Thing, dist: number}) {
+export default function ThingView({className, style, props, dist = 0}: {className?: string, style?: CSSProperties, props: Thing, dist: number}) {
   // const {
   //   attributes,
   //   listeners,
