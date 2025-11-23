@@ -73,7 +73,7 @@ async function emojiPrompt(thing: string): Promise<string> {
         content: " "+thing
       }
     ],
-    text: { format: { type: "text" } },
+    text: { format: { type: "text" }, verbosity: "low"},
     reasoning: {
       "effort": "minimal"
     },

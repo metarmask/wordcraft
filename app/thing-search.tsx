@@ -14,6 +14,7 @@ import { FormEvent, FormEventHandler, Fragment, RefObject, SetStateAction, use, 
 import { HierarchicalNSW, loadHnswlib} from 'hnswlib-wasm';
 import { Thing } from "@/lib/schema";
 import ThingView from "./thing";
+import { Dnd } from "./dnd";
 
 type MakePropNotNull<T, K extends keyof T> =
   Omit<T, K> & { [P in K]: Exclude<T[P], null> };
@@ -88,7 +89,7 @@ async function getEmbedding(text: string): Promise<number[]> {
   return await (await fetch("/api/embedding", {method: "POST", body: JSON.stringify({text})})).json()
 }
 
-export default function ThingSearch() {
+export default function ThingSearch({onPick}: {onPick: (t: Thing) => any}) {
   const [searchText, setSearchText] = useState("");
   const [classFilter, setClassFilter] = useState<ThingClassSelectorValue>(null);
   const [allThings, setAllThings] = useState<Thing[]>([])
@@ -151,12 +152,20 @@ export default function ThingSearch() {
         </Box>
         <ThingClassSelector classFilter={classFilter} onChange={setClassFilter}></ThingClassSelector>
         <Divider orientation="horizontal" flexItem />
-        <div className="flex flex-wrap justify-between">
-          {
-          thingsToDisplay
-          .map(a => <Fragment key={a[0].n}><ThingView props={a[0]} dist={a[1]} key={a[0].n}></ThingView></Fragment>)
-          // {(90-(Math.acos(a[1])/Math.PI)*180).toFixed(3)}
+        <div className="flex flex-wrap justify-between" onClick={event => {
+          const hello = event.target
+          if (hello instanceof HTMLElement) {
+            if (hello.classList.contains("thing")) {
+              onPick(allThings.find(a => a.n === parseInt(hello.dataset.n!))!)
+            }
           }
+          console.log(hello)
+        }}>
+            {
+            thingsToDisplay
+            .map(a => <Fragment key={a[0].n}><ThingView props={a[0]} dist={a[1]} key={a[0].n} ></ThingView></Fragment>)
+            // {(90-(Math.acos(a[1])/Math.PI)*180).toFixed(3)}
+            }
         </div>
       </Stack>
     </div>
