@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, jsonb, vector, PgVectorBuilder, smallint, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, jsonb, vector, PgVectorBuilder, smallint, boolean, timestamp, defaultNow } from "drizzle-orm/pg-core";
 
 export const DIMENSIONS = 3072
 
@@ -24,4 +24,5 @@ export const results = pgTable("results", {
   recipe: text().primaryKey(),
   result: text().notNull(),
   n_uses: integer(),
+  created_at: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });

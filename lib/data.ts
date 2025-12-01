@@ -56,7 +56,7 @@ const response = await client.responses.create({
     reasoning: {},
     max_output_tokens: 16
   })
-  return response.output_text.replace(recipe + " -> ", "")
+  return response.output_text.replace(/^.+? -> /, "")
 }
 
 async function emojiPrompt(thing: string): Promise<string> {
@@ -172,17 +172,22 @@ export async function getOrCreateThing(thing: string): Promise<Thing> {
   if (existingThing) {
     return existingThing
   }
-  // const [emoji, vector, classes] = await Promise.all([emojiPrompt(thing), getEmbedding(thing), classPrompt(thing)])
-  const emoji = await emojiPrompt(thing)
-  const vector = await getEmbedding(thing)
-  const classes = await classPrompt(thing)
+  const [emoji, vector, classes] = await Promise.all([emojiPrompt(thing), getEmbedding(thing), classPrompt(thing)])
+  // const emoji = await emojiPrompt(thing)
+  // const vector = await getEmbedding(thing)
+  // const classes = await classPrompt(thing)
   const things = schema.things
   await db.insert(things).values({emoji, thing, vector, ...classes}).onConflictDoNothing()
   return (await db.select().from(things).where(eq(things.thing, thing)))[0]!
 }
 
 export async function getAllThings(): Promise<Thing[]> {
-  return await db.select().from(schema.things)
+  const allowed = ["grammar", "article"]
+  for (const a of allowed) {
+    await getOrCreateThing(a)
+  }
+  console.log(db.select().from(schema.things).where(sql`thing in ${allowed}`).toSQL())
+  return await db.select().from(schema.things).where(sql`thing in ${allowed}`)
 }
 
 

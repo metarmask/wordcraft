@@ -3,10 +3,10 @@ import ThingSearch, { ThingSearchHandle } from "./thing-search";
 
 import React, {useRef, useState} from 'react';
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 
 import { Recipe, RecipeHandle } from "./recipe";
 import { Thing } from "@/lib/schema";
+import ThingView from "./thing";
 
 export default function Home() {
   const recipeRef = useRef<RecipeHandle | null>(null)
@@ -20,9 +20,10 @@ export default function Home() {
       <div className="px-2 flex flex-col items-center">
         <Button
           variant="contained"
-          color="primary"
+          color="inherit"
           aria-label="Craft recipe"
-          disabled={isCrafting}
+          loading={isCrafting}
+          loadingPosition="start"
           onClick={async () => {
             const recipeText = recipeRef.current?.getRecipeText() ?? "";
             if (!recipeText) return;
@@ -46,12 +47,15 @@ export default function Home() {
             }
           }}
         >
-          {isCrafting ? <CircularProgress size={20} color="inherit" /> : "🔨"}
+            <span
+              className={`text-3xl py-3 hammer-icon ${isCrafting ? "hammer-icon--loading" : ""}`}
+            >
+              🔨
+            </span>
         </Button>
         {craftResult ? (
-          <div className="mt-3 text-center text-lg">
-            <span className="mr-2">{craftResult.emoji}</span>
-            <span>{craftResult.thing}</span>
+          <div className="mt-3 text-center">
+            <ThingView props={craftResult} dist={0} />
           </div>
         ) : null}
       </div>
